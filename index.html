@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>University Homework Planner — 13 Weeks</title>
+  <style>
+    :root{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{margin:20px;background:#f7fafc;color:#0f172a}
+    h1{font-size:20px;margin-bottom:8px}
+    .controls{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+    th,td{padding:8px;border:1px solid #e6eef6;text-align:left;font-size:13px}
+    th{background:#eef6ff;position:sticky;top:0;z-index:2}
+    tr.week-sep td{background:#f1f5f9;font-weight:600}
+    input[type=date]{padding:4px}
+    .small{width:72px}
+    .tick{display:flex;justify-content:center}
+    .note{font-size:12px;color:#475569}
+    .btn{background:#0ea5a4;color:white;border:none;padding:8px 10px;border-radius:6px;cursor:pointer}
+    .btn.secondary{background:#64748b}
+    .topline{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .filters{display:flex;gap:8px;align-items:center}
+    .muted{color:#64748b;font-size:13px}
+    footer{margin-top:14px;color:#64748b;font-size:12px}
+    @media (max-width:900px){table{font-size:12px} .controls{flex-direction:column;align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <div class="topline">
+    <div>
+      <h1>University Homework Planner — 13 weeks</h1>
+      <div class="muted">Each task row has Due date, Done date and a tick checkbox. Use filters to find weeks/subjects.</div>
+    </div>
+    <div class="filters">
+      <label for="weekSelect">Week:</label>
+      <select id="weekSelect"><option value="all">All</option></select>
+      <label for="subjectSelect">Subject:</label>
+      <select id="subjectSelect"><option value="all">All</option></select>
+      <button class="btn" id="exportCsv">Export CSV</button>
+      <button class="btn secondary" id="clearDone">Clear All Done</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="muted">Linear Algebra includes 5 graded bonus tasks in random weeks (preselected).</div>
+  </div>
+
+  <table id="planner">
+    <thead>
+      <tr>
+        <th class="small">Week</th>
+        <th>Subject</th>
+        <th>Task</th>
+        <th class="small">Due Date</th>
+        <th class="small">Done Date</th>
+        <th class="small">Done</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <footer>Generated planner for 13 weeks · Change the Linear Algebra bonus-week choices directly in the script if you want different weeks.</footer>
+
+  <script>
+    // Configuration: subjects and weekly tasks
+    const WEEKS = 13;
+    const subjects = [
+      { key:'linear-algebra', name:'Linear Algebra 1', weeklyTasks:['Homework'], weeklyRecap:true },
+      { key:'analysis', name:'Analysis 1', weeklyTasks:['Homework','Quiz','Bonus Task (graded)'], weeklyRecap:true },
+      { key:'chemistry', name:'Chemistry', weeklyTasks:['Graded Bonus Task','Exercises'], weeklyRecap:true },
+      { key:'mechanics', name:'Mechanics', weeklyTasks:['Homework'], weeklyRecap:true },
+      { key:'cs', name:'Computer Science', weeklyTasks:['Homework'], weeklyRecap:true },
+      { key:'eng-design', name:'Engineering Design', weeklyTasks:['Homework'], weeklyRecap:true }
+    ];
+
+    // Preselected 5 random weeks for Linear Algebra graded bonus tasks (change if you want):
+    const linearAlgebraBonusWeeks = [2,4,6,9,12];
+
+    // DOM
+    const tbody = document.querySelector('#planner tbody');
+    const weekSelect = document.getElementById('weekSelect');
+    const subjectSelect = document.getElementById('subjectSelect');
+
+    // Populate week and subject filter options
+    for(let w=1; w<=WEEKS; w++){ const opt = document.createElement('option'); opt.value = w; opt.textContent = 'Week '+w; weekSelect.appendChild(opt); }
+    const allOpt = document.createElement('option'); allOpt.value='recap'; allOpt.textContent='Recaps only'; // extra filter
+    weekSelect.appendChild(allOpt);
+    subjectSelect.innerHTML = '<option value="all">All</option>' + subjects.map(s=>`<option value="${s.key}">${s.name}</option>`).join('');
+
+    // Helper to create a row
+    function createRow(week, subjectKey, subjectName, taskName, isRecap=false){
+      const tr = document.createElement('tr');
+      const weekTd = document.createElement('td'); weekTd.textContent = week; tr.appendChild(weekTd);
+      const subjTd = document.createElement('td'); subjTd.textContent = subjectName; tr.appendChild(subjTd);
+      const taskTd = document.createElement('td'); taskTd.textContent = taskName + (isRecap? ' (Recap)':''); tr.appendChild(taskTd);
+
+      const dueTd = document.createElement('td');
+      const dueInput = document.createElement('input'); dueInput.type='date'; dueInput.className='small'; dueTd.appendChild(dueInput); tr.appendChild(dueTd);
+
+      const doneDateTd = document.createElement('td');
+      const doneInput = document.createElement('input'); doneInput.type='date'; doneInput.className='small'; doneDateTd.appendChild(doneInput); tr.appendChild(doneDateTd);
+
+      const tickTd = document.createElement('td'); tickTd.className='tick';
+      const checkbox = document.createElement('input'); checkbox.type='checkbox'; checkbox.title='Mark task done'; tickTd.appendChild(checkbox); tr.appendChild(tickTd);
+
+      const notesTd = document.createElement('td');
+      const notes = document.createElement('input'); notes.type='text'; notes.placeholder='Notes'; notes.style.width='100%'; notesTd.appendChild(notes); tr.appendChild(notesTd);
+
+      // add attributes for filtering
+      tr.dataset.week = week;
+      tr.dataset.subject = subjectKey;
+      tr.dataset.isRecap = isRecap ? '1':'0';
+
+      return tr;
+    }
+
+    // Build table rows for each week and subject
+    for(let w=1; w<=WEEKS; w++){
+      // optional visual separator row for each week
+      const sep = document.createElement('tr'); sep.className='week-sep'; const sd = document.createElement('td'); sd.colSpan=7; sd.textContent = 'Week '+w; sep.appendChild(sd); tbody.appendChild(sep);
+
+      for(const subj of subjects){
+        // regular weekly tasks
+        for(const t of subj.weeklyTasks){
+          // Linear Algebra extra: if t is 'Homework' and we need to add a 'Graded Bonus Task' in some weeks, we'll add it separately below
+          const tr = createRow(w, subj.key, subj.name, t, false);
+          tbody.appendChild(tr);
+        }
+        // recap row for subject
+        if(subj.weeklyRecap){
+          const recapRow = createRow(w, subj.key, subj.name, 'Weekly Recap', true);
+          tbody.appendChild(recapRow);
+        }
+      }
+
+      // add Linear Algebra graded bonus task in preselected weeks
+      if(linearAlgebraBonusWeeks.includes(w)){
+        const laBonus = createRow(w, 'linear-algebra', 'Linear Algebra 1', 'Graded Bonus Task (Linear Algebra)', false);
+        tbody.appendChild(laBonus);
+      }
+    }
+
+    // Filtering logic
+    function applyFilters(){
+      const weekVal = weekSelect.value;
+      const subjVal = subjectSelect.value;
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach(r=>{
+        // skip separator rows which have class week-sep
+        if(r.classList.contains('week-sep')){ r.style.display = 'table-row'; return; }
+        const rowWeek = r.dataset.week;
+        const rowSubj = r.dataset.subject;
+        const isRecap = r.dataset.isRecap === '1';
+        let show=true;
+        if(weekVal !== 'all'){
+          if(weekVal === 'recap'){ show = isRecap; }
+          else show = (rowWeek === weekVal);
+        }
+        if(subjVal !== 'all') show = show && (rowSubj === subjVal);
+        r.style.display = show ? 'table-row':'none';
+      });
+    }
+
+    weekSelect.addEventListener('change', applyFilters);
+    subjectSelect.addEventListener('change', applyFilters);
+
+    // Export CSV
+    function exportCSV(){
+      const rows = [];
+      const header = ['Week','Subject','Task','Due Date','Done Date','Done','Notes'];
+      rows.push(header.join(','));
+      const trs = tbody.querySelectorAll('tr');
+      trs.forEach(tr=>{
+        if(tr.classList.contains('week-sep')) return;
+        if(tr.style.display === 'none') return; // only export visible rows
+        const cols = tr.querySelectorAll('td');
+        const week = cols[0].innerText.trim();
+        const subject = cols[1].innerText.trim();
+        const task = cols[2].innerText.trim();
+        const due = cols[3].querySelector('input')?.value || '';
+        const done = cols[4].querySelector('input')?.value || '';
+        const tick = cols[5].querySelector('input')?.checked ? 'Yes':'No';
+        const note = cols[6].querySelector('input')?.value || '';
+        // simple CSV-safe escaping
+        const esc = v => '"' + String(v).replace(/"/g,'""') + '"';
+        rows.push([esc(week),esc(subject),esc(task),esc(due),esc(done),esc(tick),esc(note)].join(','));
+      });
+      const csv = rows.join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'homework_planner_weeks1-13.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('exportCsv').addEventListener('click', exportCSV);
+
+    // Clear all Done checkboxes
+    document.getElementById('clearDone').addEventListener('click', ()=>{
+      if(!confirm('Clear all "Done" checkboxes?')) return;
+      tbody.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
+    });
+
+    // initial filter apply
+    applyFilters();
+  </script>
+</body>
+</html>
