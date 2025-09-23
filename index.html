@@ -43,7 +43,7 @@
   </div>
 
   <div class="controls">
-    <div class="muted">Linear Algebra includes 5 graded bonus tasks in random weeks (preselected).</div>
+    <div class="muted">Linear Algebra now includes a graded bonus task each week (mark only if needed).</div>
   </div>
 
   <table id="planner">
@@ -61,13 +61,12 @@
     <tbody></tbody>
   </table>
 
-  <footer>Generated planner for 13 weeks · Change the Linear Algebra bonus-week choices directly in the script if you want different weeks.</footer>
+  <footer>Generated planner for 13 weeks · Linear Algebra graded bonus task appears every week now.</footer>
 
   <script>
-    // Configuration: subjects and weekly tasks
     const WEEKS = 13;
     const subjects = [
-      { key:'linear-algebra', name:'Linear Algebra 1', weeklyTasks:['Homework'], weeklyRecap:true },
+      { key:'linear-algebra', name:'Linear Algebra 1', weeklyTasks:['Homework','Graded Bonus Task'], weeklyRecap:true },
       { key:'analysis', name:'Analysis 1', weeklyTasks:['Homework','Quiz','Bonus Task (graded)'], weeklyRecap:true },
       { key:'chemistry', name:'Chemistry', weeklyTasks:['Graded Bonus Task','Exercises'], weeklyRecap:true },
       { key:'mechanics', name:'Mechanics', weeklyTasks:['Homework'], weeklyRecap:true },
@@ -75,21 +74,15 @@
       { key:'eng-design', name:'Engineering Design', weeklyTasks:['Homework'], weeklyRecap:true }
     ];
 
-    // Preselected 5 random weeks for Linear Algebra graded bonus tasks (change if you want):
-    const linearAlgebraBonusWeeks = [2,4,6,9,12];
-
-    // DOM
     const tbody = document.querySelector('#planner tbody');
     const weekSelect = document.getElementById('weekSelect');
     const subjectSelect = document.getElementById('subjectSelect');
 
-    // Populate week and subject filter options
     for(let w=1; w<=WEEKS; w++){ const opt = document.createElement('option'); opt.value = w; opt.textContent = 'Week '+w; weekSelect.appendChild(opt); }
-    const allOpt = document.createElement('option'); allOpt.value='recap'; allOpt.textContent='Recaps only'; // extra filter
+    const allOpt = document.createElement('option'); allOpt.value='recap'; allOpt.textContent='Recaps only';
     weekSelect.appendChild(allOpt);
     subjectSelect.innerHTML = '<option value="all">All</option>' + subjects.map(s=>`<option value="${s.key}">${s.name}</option>`).join('');
 
-    // Helper to create a row
     function createRow(week, subjectKey, subjectName, taskName, isRecap=false){
       const tr = document.createElement('tr');
       const weekTd = document.createElement('td'); weekTd.textContent = week; tr.appendChild(weekTd);
@@ -108,7 +101,6 @@
       const notesTd = document.createElement('td');
       const notes = document.createElement('input'); notes.type='text'; notes.placeholder='Notes'; notes.style.width='100%'; notesTd.appendChild(notes); tr.appendChild(notesTd);
 
-      // add attributes for filtering
       tr.dataset.week = week;
       tr.dataset.subject = subjectKey;
       tr.dataset.isRecap = isRecap ? '1':'0';
@@ -116,39 +108,26 @@
       return tr;
     }
 
-    // Build table rows for each week and subject
     for(let w=1; w<=WEEKS; w++){
-      // optional visual separator row for each week
       const sep = document.createElement('tr'); sep.className='week-sep'; const sd = document.createElement('td'); sd.colSpan=7; sd.textContent = 'Week '+w; sep.appendChild(sd); tbody.appendChild(sep);
 
       for(const subj of subjects){
-        // regular weekly tasks
         for(const t of subj.weeklyTasks){
-          // Linear Algebra extra: if t is 'Homework' and we need to add a 'Graded Bonus Task' in some weeks, we'll add it separately below
           const tr = createRow(w, subj.key, subj.name, t, false);
           tbody.appendChild(tr);
         }
-        // recap row for subject
         if(subj.weeklyRecap){
           const recapRow = createRow(w, subj.key, subj.name, 'Weekly Recap', true);
           tbody.appendChild(recapRow);
         }
       }
-
-      // add Linear Algebra graded bonus task in preselected weeks
-      if(linearAlgebraBonusWeeks.includes(w)){
-        const laBonus = createRow(w, 'linear-algebra', 'Linear Algebra 1', 'Graded Bonus Task (Linear Algebra)', false);
-        tbody.appendChild(laBonus);
-      }
     }
 
-    // Filtering logic
     function applyFilters(){
       const weekVal = weekSelect.value;
       const subjVal = subjectSelect.value;
       const rows = tbody.querySelectorAll('tr');
       rows.forEach(r=>{
-        // skip separator rows which have class week-sep
         if(r.classList.contains('week-sep')){ r.style.display = 'table-row'; return; }
         const rowWeek = r.dataset.week;
         const rowSubj = r.dataset.subject;
@@ -166,7 +145,6 @@
     weekSelect.addEventListener('change', applyFilters);
     subjectSelect.addEventListener('change', applyFilters);
 
-    // Export CSV
     function exportCSV(){
       const rows = [];
       const header = ['Week','Subject','Task','Due Date','Done Date','Done','Notes'];
@@ -174,7 +152,7 @@
       const trs = tbody.querySelectorAll('tr');
       trs.forEach(tr=>{
         if(tr.classList.contains('week-sep')) return;
-        if(tr.style.display === 'none') return; // only export visible rows
+        if(tr.style.display === 'none') return;
         const cols = tr.querySelectorAll('td');
         const week = cols[0].innerText.trim();
         const subject = cols[1].innerText.trim();
@@ -183,7 +161,6 @@
         const done = cols[4].querySelector('input')?.value || '';
         const tick = cols[5].querySelector('input')?.checked ? 'Yes':'No';
         const note = cols[6].querySelector('input')?.value || '';
-        // simple CSV-safe escaping
         const esc = v => '"' + String(v).replace(/"/g,'""') + '"';
         rows.push([esc(week),esc(subject),esc(task),esc(due),esc(done),esc(tick),esc(note)].join(','));
       });
@@ -195,13 +172,11 @@
 
     document.getElementById('exportCsv').addEventListener('click', exportCSV);
 
-    // Clear all Done checkboxes
     document.getElementById('clearDone').addEventListener('click', ()=>{
       if(!confirm('Clear all "Done" checkboxes?')) return;
       tbody.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
     });
 
-    // initial filter apply
     applyFilters();
   </script>
 </body>
