@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>University Homework Planner — 13 Weeks</title>
+  <style>
+    :root {
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    }
+
+    body {
+      margin: 20px;
+      background: #f7fafc;
+      color: #0f172a
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08)
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border: 1px solid #e6eef6;
+      text-align: left;
+      font-size: 13px
+    }
+
+    th {
+      background: #eef6ff;
+      position: sticky;
+      top: 0;
+      z-index: 2
+    }
+
+    tr.week-sep td {
+      background: #f1f5f9;
+      font-weight: 600
+    }
+
+    input[type=date] {
+      padding: 4px
+    }
+
+    .small {
+      width: 72px
+    }
+
+    .tick {
+      display: flex;
+      justify-content: center
+    }
+
+    .note {
+      font-size: 12px;
+      color: #475569
+    }
+
+    .btn {
+      background: #0ea5a4;
+      color: white;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer
+    }
+
+    .btn.secondary {
+      background: #64748b
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .muted {
+      color: #64748b;
+      font-size: 13px
+    }
+
+    footer {
+      margin-top: 14px;
+      color: #64748b;
+      font-size: 12px
+    }
+
+    @media (max-width:900px) {
+      table {
+        font-size: 12px
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: flex-start
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topline">
+    <div>
+      <h1>University Homework Planner — 13 weeks</h1>
+      <div class="muted">Each task row has Due date, Done date and a tick checkbox. Use filters to find weeks/subjects.
+      </div>
+    </div>
+    <div class="filters">
+      <label for="weekSelect">Week:</label>
+      <select id="weekSelect">
+        <option value="all">All</option>
+      </select>
+      <label for="subjectSelect">Subject:</label>
+      <select id="subjectSelect">
+        <option value="all">All</option>
+      </select>
+      <button class="btn" id="exportCsv">Export CSV</button>
+      <button class="btn secondary" id="clearDone">Clear All Done</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <ul class="muted">Deadlines
+      <li>Computer Science 2: 
+        <ul>
+          <li>Homework: Monday Week n + 2</li>
+          <li>Weekly Recap: Till Weekend</li>
+        </ul>
+      </li>
+      <li>Linear Algebra 2:
+        <ul>
+          <li>Homework: Thursday Week n + 2</li>
+          <li>Graded Bonus Tasks: Thursday Week n + 1</li>
+          <li>Weekly Recap: Till Weekend</li>
+        </ul>
+      </li>
+      <li>Calculus 2:
+        <ul>
+          <li>Homework: Monday Week n + 1</li>
+          <li>Quiz: Monday Week n + 1</li>
+          <li>Weekly Recap: Till Weekend</li>
+        </ul>
+      </li>
+      <li>Physics:
+        <ul>
+          <li>Homework: Thursday Week n + 1</li>
+          <li>Lab Report: Friday Week n + 1</li>
+          <li>Weekly Recap: Till Weekend</li>
+        </ul>
+      </li>
+      <li>Machine Design:
+        <ul>
+          <li>Homework: Till Weekend</li>
+          <li>Weekly Recap: Till Weekend</li>
+        </ul>
+      </li>
+      <li>Mechanics 2:
+        <ul>
+          <li>Homework: Tuesday Week n + 2</li>
+          <li>Weekly Recap: Till Weekend</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <table id="planner">
+    <thead>
+      <tr>
+        <th class="small">Week</th>
+        <th>Subject</th>
+        <th>Task</th>
+        <th class="small">Due Date</th>
+        <th class="small">Done Date</th>
+        <th class="small">Done</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <footer>Generated planner for 13 weeks · Customize deadlines as needed for your courses.</footer>
+
+  <script>
+    const WEEKS = 13;
+    const subjects = [
+      { key: 'cs2', name: 'Computer Science 2', weeklyTasks: ['Homework'], weeklyRecap: true },
+      { key: 'linear-algebra2', name: 'Linear Algebra 2', weeklyTasks: ['Homework', 'Graded Bonus Task'], weeklyRecap: true },
+      { key: 'calculus2', name: 'Calculus 2', weeklyTasks: ['Homework', 'Quiz'], weeklyRecap: true },
+      { key: 'physics', name: 'Physics', weeklyTasks: ['Homework', 'Lab Report'], weeklyRecap: true },
+      { key: 'machine-design', name: 'Machine Design', weeklyTasks: ['Homework'], weeklyRecap: true },
+      { key: 'mechanics2', name: 'Mechanics 2', weeklyTasks: ['Homework'], weeklyRecap: true }
+    ];
+
+    const tbody = document.querySelector('#planner tbody');
+    const weekSelect = document.getElementById('weekSelect');
+    const subjectSelect = document.getElementById('subjectSelect');
+
+    for (let w = 1; w <= WEEKS; w++) { const opt = document.createElement('option'); opt.value = w; opt.textContent = 'Week ' + w; weekSelect.appendChild(opt); }
+    const allOpt = document.createElement('option'); allOpt.value = 'recap'; allOpt.textContent = 'Recaps only';
+    weekSelect.appendChild(allOpt);
+    subjectSelect.innerHTML = '<option value="all">All</option>' + subjects.map(s => `<option value="${s.key}">${s.name}</option>`).join('');
+
+    function createRow(week, subjectKey, subjectName, taskName, isRecap = false) {
+      const tr = document.createElement('tr');
+      const weekTd = document.createElement('td'); weekTd.textContent = week; tr.appendChild(weekTd);
+      const subjTd = document.createElement('td'); subjTd.textContent = subjectName; tr.appendChild(subjTd);
+      const taskTd = document.createElement('td'); taskTd.textContent = taskName + (isRecap ? ' (Recap)' : ''); tr.appendChild(taskTd);
+
+      const dueTd = document.createElement('td');
+      const dueInput = document.createElement('input'); dueInput.type = 'date'; dueInput.className = 'small'; dueTd.appendChild(dueInput); tr.appendChild(dueTd);
+
+      const doneDateTd = document.createElement('td');
+      const doneInput = document.createElement('input'); doneInput.type = 'date'; doneInput.className = 'small'; doneDateTd.appendChild(doneInput); tr.appendChild(doneDateTd);
+
+      const tickTd = document.createElement('td'); tickTd.className = 'tick';
+      const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.title = 'Mark task done'; tickTd.appendChild(checkbox); tr.appendChild(tickTd);
+
+      const notesTd = document.createElement('td');
+      const notes = document.createElement('input'); notes.type = 'text'; notes.placeholder = 'Notes'; notes.style.width = '100%'; notesTd.appendChild(notes); tr.appendChild(notesTd);
+
+      tr.dataset.week = week;
+      tr.dataset.subject = subjectKey;
+      tr.dataset.isRecap = isRecap ? '1' : '0';
+
+      return tr;
+    }
+
+    for (let w = 1; w <= WEEKS; w++) {
+      const sep = document.createElement('tr'); sep.className = 'week-sep'; const sd = document.createElement('td'); sd.colSpan = 7; sd.textContent = 'Week ' + w; sep.appendChild(sd); tbody.appendChild(sep);
+
+      for (const subj of subjects) {
+        for (const t of subj.weeklyTasks) {
+          const tr = createRow(w, subj.key, subj.name, t, false);
+          tbody.appendChild(tr);
+        }
+        if (subj.weeklyRecap) {
+          const recapRow = createRow(w, subj.key, subj.name, 'Weekly Recap', true);
+          tbody.appendChild(recapRow);
+        }
+      }
+    }
+
+    function applyFilters() {
+      const weekVal = weekSelect.value;
+      const subjVal = subjectSelect.value;
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach(r => {
+        if (r.classList.contains('week-sep')) { r.style.display = 'table-row'; return; }
+        const rowWeek = r.dataset.week;
+        const rowSubj = r.dataset.subject;
+        const isRecap = r.dataset.isRecap === '1';
+        let show = true;
+        if (weekVal !== 'all') {
+          if (weekVal === 'recap') { show = isRecap; }
+          else show = (rowWeek === weekVal);
+        }
+        if (subjVal !== 'all') show = show && (rowSubj === subjVal);
+        r.style.display = show ? 'table-row' : 'none';
+      });
+    }
+
+    weekSelect.addEventListener('change', applyFilters);
+    subjectSelect.addEventListener('change', applyFilters);
+
+    function exportCSV() {
+      const rows = [];
+      const header = ['Week', 'Subject', 'Task', 'Due Date', 'Done Date', 'Done', 'Notes'];
+      rows.push(header.join(','));
+      const trs = tbody.querySelectorAll('tr');
+      trs.forEach(tr => {
+        if (tr.classList.contains('week-sep')) return;
+        if (tr.style.display === 'none') return;
+        const cols = tr.querySelectorAll('td');
+        const week = cols[0].innerText.trim();
+        const subject = cols[1].innerText.trim();
+        const task = cols[2].innerText.trim();
+        const due = cols[3].querySelector('input')?.value || '';
+        const done = cols[4].querySelector('input')?.value || '';
+        const tick = cols[5].querySelector('input')?.checked ? 'Yes' : 'No';
+        const note = cols[6].querySelector('input')?.value || '';
+        const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+        rows.push([esc(week), esc(subject), esc(task), esc(due), esc(done), esc(tick), esc(note)].join(','));
+      });
+      const csv = rows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'homework_planner_weeks1-13.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('exportCsv').addEventListener('click', exportCSV);
+
+    document.getElementById('clearDone').addEventListener('click', () => {
+      if (!confirm('Clear all "Done" checkboxes?')) return;
+      tbody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+    });
+
+    applyFilters();
+
+    // Key for localStorage
+    const STORAGE_KEY = "homeworkPlannerData";
+
+    // Save state
+    function saveState() {
+      const data = [];
+      tbody.querySelectorAll("tr").forEach(tr => {
+        if (tr.classList.contains("week-sep")) return;
+        const cols = tr.querySelectorAll("td");
+        const row = {
+          week: tr.dataset.week,
+          subject: tr.dataset.subject,
+          task: cols[2].innerText.trim(),
+          due: cols[3].querySelector("input")?.value || "",
+          done: cols[4].querySelector("input")?.value || "",
+          tick: cols[5].querySelector("input")?.checked || false,
+          notes: cols[6].querySelector("input")?.value || ""
+        };
+        data.push(row);
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Load state
+    function loadState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      const data = JSON.parse(saved);
+      data.forEach(item => {
+        const tr = [...tbody.querySelectorAll("tr")].find(r =>
+          r.dataset.week === item.week &&
+          r.dataset.subject === item.subject &&
+          r.querySelector("td:nth-child(3)")?.innerText.trim().startsWith(item.task)
+        );
+        if (tr) {
+          tr.querySelector("td:nth-child(4) input").value = item.due;
+          tr.querySelector("td:nth-child(5) input").value = item.done;
+          tr.querySelector("td:nth-child(6) input").checked = item.tick;
+          tr.querySelector("td:nth-child(7) input").value = item.notes;
+        }
+      });
+    }
+
+    // Attach listeners to save on every change
+    function attachAutosave() {
+      tbody.querySelectorAll("input").forEach(inp => {
+        inp.addEventListener("change", saveState);
+        inp.addEventListener("input", saveState);
+      });
+    }
+
+    // Run on startup
+    loadState();
+    attachAutosave();
+
+  </script>
+</body>
+
+</html>
