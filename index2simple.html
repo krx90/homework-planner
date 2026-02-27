@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>University Homework Planner — 13 Weeks</title>
+  <style>
+    :root {
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    }
+
+    body {
+      margin: 20px;
+      background: #f7fafc;
+      color: #0f172a
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border: 1px solid #e6eef6;
+      text-align: center;
+      font-size: 13px
+    }
+
+    th {
+      background: #eef6ff;
+      position: sticky;
+      top: 0;
+      z-index: 2
+    }
+
+    td:first-child {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    input[type=checkbox] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .btn {
+      background: #0ea5a4;
+      color: white;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      margin-right: 8px;
+    }
+
+    .btn.secondary {
+      background: #64748b
+    }
+
+    footer {
+      margin-top: 14px;
+      color: #64748b;
+      font-size: 12px
+    }
+
+    @media (max-width:900px) {
+      body {
+        margin: 10px;
+      }
+      
+      table {
+        font-size: 12px
+      }
+      
+      th, td {
+        padding: 10px 4px;
+      }
+      
+      input[type=checkbox] {
+        width: 22px;
+        height: 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div style="margin-bottom: 12px;">
+    <button class="btn" id="exportCsv">Export CSV</button>
+    <button class="btn secondary" id="clearDone">Clear All Done</button>
+  </div>
+
+  <table id="planner">
+    <thead>
+      <tr>
+        <th style="text-align: left;">Week</th>
+        <th>Calculus 2</th>
+        <th>Mechanics 2</th>
+        <th>Computer Science 2</th>
+        <th>Physics</th>
+        <th>Machine Design</th>
+        <th>Linear Algebra 2</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <footer>Generated planner for 13 weeks · Check off subjects as you complete them each week.</footer>
+
+  <script>
+    const WEEKS = 13;
+    const subjects = [
+      { key: 'calculus2', name: 'Calculus 2' },
+      { key: 'mechanics2', name: 'Mechanics 2' },
+      { key: 'cs2', name: 'Computer Science 2' },
+      { key: 'physics', name: 'Physics' },
+      { key: 'machine-design', name: 'Machine Design' },
+      { key: 'linear-algebra2', name: 'Linear Algebra 2' }
+    ];
+
+    const tbody = document.querySelector('#planner tbody');
+
+    // Build all rows first
+    for (let w = 1; w <= WEEKS; w++) {
+      const tr = document.createElement('tr');
+      
+      const weekTd = document.createElement('td');
+      weekTd.textContent = 'Week ' + w;
+      tr.appendChild(weekTd);
+
+      for (let i = 0; i < subjects.length; i++) {
+        const subj = subjects[i];
+        const td = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.title = 'Mark ' + subj.name + ' done for week ' + w;
+        checkbox.dataset.week = w;
+        checkbox.dataset.subject = subj.key;
+        td.appendChild(checkbox);
+        tr.appendChild(td);
+      }
+
+      tbody.appendChild(tr);
+    }
+
+    function exportCSV() {
+      const rows = [];
+      const header = ['Week', ...subjects.map(s => s.name)];
+      rows.push(header.join(','));
+      
+      const trs = tbody.querySelectorAll('tr');
+      trs.forEach(tr => {
+        const week = tr.querySelector('td:first-child').innerText.trim();
+        const checks = [...tr.querySelectorAll('input[type=checkbox]')].map(cb => cb.checked ? 'Yes' : 'No');
+        const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+        rows.push([esc(week), ...checks.map(esc)].join(','));
+      });
+      
+      const csv = rows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'homework_planner_weeks1-13.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('exportCsv').addEventListener('click', exportCSV);
+
+    document.getElementById('clearDone').addEventListener('click', function() {
+      if (!confirm('Clear all checkboxes?')) return;
+      tbody.querySelectorAll('input[type=checkbox]').forEach(function(cb) { 
+        cb.checked = false;
+      });
+      saveState();
+    });
+
+    // Key for localStorage
+    const STORAGE_KEY = "homeworkPlannerData";
+
+    // Save state
+    function saveState() {
+      const data = [];
+      tbody.querySelectorAll('input[type=checkbox]').forEach(function(cb) {
+        data.push({
+          week: cb.dataset.week,
+          subject: cb.dataset.subject,
+          checked: cb.checked
+        });
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Load state
+    function loadState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      try {
+        const data = JSON.parse(saved);
+        data.forEach(function(item) {
+          const cb = tbody.querySelector(
+            'input[data-week="' + item.week + '"][data-subject="' + item.subject + '"]'
+          );
+          if (cb) cb.checked = item.checked;
+        });
+      } catch(e) {
+        console.error('Error loading state:', e);
+      }
+    }
+
+    // Attach listeners to save on every change
+    tbody.querySelectorAll('input[type=checkbox]').forEach(function(cb) {
+      cb.addEventListener('change', saveState);
+    });
+
+    // Run on startup
+    loadState();
+  </script>
+</body>
+
+</html>
